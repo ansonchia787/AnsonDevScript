@@ -1,15 +1,13 @@
+--!strict
+
 local HttpGet = game.HttpGet
-local GameId = game.GameId
+local GameId: number = game.GameId
 
-local Games = loadstring(
-    HttpGet(game, "https://raw.githubusercontent.com/ansonchia787/AnsonDevScript/main/gamelist.lua")
-)()
+local Games: {[number]: string} = loadstring(
+  HttpGet(game, "https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/GameList.lua")
+)() :: any
 
-local URL = Games[GameId]
-
-if not URL then
-    warn("Game not supported:", GameId)
-    return
-end
+local URL: string? = Games[GameId]
+if not URL then return end
 
 loadstring(HttpGet(game, URL))()
