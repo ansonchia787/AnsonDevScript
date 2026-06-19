@@ -1,5 +1,5 @@
 --[[
-    AnsonDev - Moped Drag
+    AnsonDev - Merge a Nuke
     Version : 1.0.0
     Author  : AnsonDev
     UI      : WindUI
@@ -7,55 +7,53 @@
 
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 
-local Players          = game:GetService("Players")
-local RunService       = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TeleportService  = game:GetService("TeleportService")
-local VirtualUser      = game:GetService("VirtualUser")
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local TeleportService   = game:GetService("TeleportService")
+local VirtualUser       = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace         = game:GetService("Workspace")
 
-local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
+local player  = Players.LocalPlayer
+local camera  = workspace.CurrentCamera
+local PlayerId = tonumber(player.UserId)
 
 local S = {
-    farmPoints={}, farmIndex=1, farmRunning=false, farmConn=nil, farmSpeed=150, arrivalDist=12,
-    boostEnabled=false, boostConn=nil, boostMulti=2,
+    AutoMerge=false, AutoPickUp=false, AutoLock=false, AutoUpgrade=false, SelectedUpgrades={},
+    walkEnabled=false, walkVal=16, jumpEnabled=false, jumpVal=50, infJumpConn=nil,
+    godOn=false, godConn=nil,
     flyEnabled=false, flyConn=nil, flyTpConn=nil, flyNowe=false, flySpeed=50,
     noclipEnabled=false, noclipConn=nil,
-    walkEnabled=false, walkVal=16,
-    jumpEnabled=false, jumpVal=50, infJumpConn=nil,
-    godOn=false, godConn=nil,
-    fpsBoostOn=false, mopedMaxSpd=300, mopedTorque=50000,
+    EspEnabled=false, EspConns={},
+    EspFolder=Workspace:FindFirstChild("AnsonDevESP") or Instance.new("Folder",Workspace),
+    fpsBoostOn=false,
 }
+S.EspFolder.Name="AnsonDevESP"
 
 local function getChar()  return player.Character end
 local function getHRP()   local c=getChar(); return c and c:FindFirstChild("HumanoidRootPart") end
 local function getHum()   local c=getChar(); return c and c:FindFirstChildOfClass("Humanoid") end
-local function getSeat()
-    local h=getHum()
-    if h and h.SeatPart and h.SeatPart:IsA("VehicleSeat") then return h.SeatPart end
-end
-local function getVehicleModel() local s=getSeat(); return s and s.Parent end
-local function getVehicleRoot()
-    local s=getSeat(); if not s then return nil end
-    local m=s.Parent; return (m and (m.PrimaryPart or m:FindFirstChildOfClass("BasePart"))) or s
-end
-local function isR6() local c=getChar(); return c and c:FindFirstChild("Torso")~=nil end
-local function getTorso()
-    local c=getChar(); if not c then return nil end
-    return isR6() and c:FindFirstChild("Torso") or c:FindFirstChild("UpperTorso")
-end
+local function isR6()     local c=getChar(); return c and c:FindFirstChild("Torso")~=nil end
+local function getTorso() local c=getChar(); if not c then return nil end; return isR6() and c:FindFirstChild("Torso") or c:FindFirstChild("UpperTorso") end
 local function ensureBV(part,name,force)
-    local bv=part:FindFirstChild(name)
-    if not bv then bv=Instance.new("BodyVelocity"); bv.Name=name; bv.MaxForce=Vector3.new(force,force,force); bv.Velocity=Vector3.zero; bv.Parent=part end
-    return bv
+    local bv=part:FindFirstChild(name); if not bv then bv=Instance.new("BodyVelocity"); bv.Name=name; bv.MaxForce=Vector3.new(force,force,force); bv.Velocity=Vector3.zero; bv.Parent=part end; return bv
 end
 local function ensureBG(part,name)
-    local bg=part:FindFirstChild(name)
-    if not bg then bg=Instance.new("BodyGyro"); bg.Name=name; bg.MaxTorque=Vector3.new(9e9,9e9,9e9); bg.P=9e4; bg.D=500; bg.CFrame=part.CFrame; bg.Parent=part end
-    return bg
+    local bg=part:FindFirstChild(name); if not bg then bg=Instance.new("BodyGyro"); bg.Name=name; bg.MaxTorque=Vector3.new(9e9,9e9,9e9); bg.P=9e4; bg.D=500; bg.CFrame=part.CFrame; bg.Parent=part end; return bg
 end
-local function cleanInst(part,name) if not part then return end local i=part:FindFirstChild(name); if i then i:Destroy() end end
+local function cleanInst(part,name) if not part then return end; local i=part:FindFirstChild(name); if i then i:Destroy() end end
 local function notify(t,c) WindUI:Notify({Title=t,Content=c or "",Duration=3}) end
+
+local function getPlayerBase()
+    local bases=Workspace:FindFirstChild("Bases"); if not bases then return nil end
+    for _,f in ipairs(bases:GetChildren()) do local a=f:GetAttribute("OwnerUserId"); if a and tonumber(a)==PlayerId then return f end end
+end
+local function teleportTo(obj)
+    if not obj or not getChar() then return end; local root=getHRP(); local pos
+    if obj:IsA("Model") then pos=obj:GetPivot().Position elseif obj:IsA("BasePart") then pos=obj.Position end
+    if root and pos then root.CFrame=CFrame.new(pos+Vector3.new(0,2,0)) end
+end
 
 -- FPS Overlay
 local fpsGui=Instance.new("ScreenGui"); fpsGui.Name="AnsonDevFPS"; fpsGui.ResetOnSpawn=false
@@ -74,7 +72,6 @@ RunService.Heartbeat:Connect(function(dt)
     fpsLbl.TextColor3=avg>=55 and Color3.fromRGB(80,220,100) or avg>=30 and Color3.fromRGB(240,180,60) or Color3.fromRGB(220,70,70)
 end)
 
--- FPS Boost
 local function applyFpsBoost()
     pcall(function() workspace.GlobalShadows=false end)
     pcall(function() settings().Rendering.QualityLevel=Enum.QualityLevel.Level01 end)
@@ -86,68 +83,6 @@ local function removeFpsBoost()
     pcall(function() settings().Rendering.QualityLevel=Enum.QualityLevel.Automatic end)
     for _,v in ipairs(workspace:GetDescendants()) do pcall(function()
         if v:IsA("ParticleEmitter") or v:IsA("Beam") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then v.Enabled=true end end) end
-end
-
--- Moped Physics
-local function overrideMopedPhysics(maxSpd,maxTorque)
-    local model=getVehicleModel(); if not model then return false end
-    for _,v in ipairs(model:GetDescendants()) do pcall(function()
-        if v:IsA("VehicleSeat") then v.MaxSpeed=maxSpd end
-        if v:IsA("TorqueConstraint") then v.MaxTorque=maxTorque end
-        if v:IsA("HingeConstraint") and v.ActuatorType==Enum.ActuatorType.Motor then v.MaxTorque=maxTorque; v.AngularVelocity=maxSpd/8 end
-        if v:IsA("BodyVelocity") then v.MaxForce=Vector3.new(1e6,1e6,1e6) end
-    end) end
-    return true
-end
-
--- Farm
-local function stopFarm()
-    S.farmRunning=false
-    if S.farmConn then S.farmConn:Disconnect(); S.farmConn=nil end
-    local vr=getVehicleRoot(); if vr then cleanInst(vr,"FarmBV"); cleanInst(vr,"FarmBG") end
-    local s=getSeat(); if s then s.ThrottleFloat=0; s.SteerFloat=0 end
-end
-local function startFarm(points)
-    local pts=points or S.farmPoints
-    if #pts<2 then return false,"Need at least 2 points." end
-    if not getVehicleRoot() then return false,"Sit on the moped first." end
-    S.farmRunning=true; S.farmIndex=1
-    S.farmConn=RunService.Heartbeat:Connect(function()
-        if not S.farmRunning then return end
-        local vr=getVehicleRoot(); if not vr then stopFarm(); return end
-        local t=pts[S.farmIndex]; if not t then S.farmIndex=1; return end
-        local c=vr.Position; local dx,dy,dz=t.X-c.X,t.Y-c.Y,t.Z-c.Z
-        if math.sqrt(dx*dx+dy*dy+dz*dz)<S.arrivalDist then
-            S.farmIndex=(S.farmIndex%#pts)+1; t=pts[S.farmIndex]; dx,dy,dz=t.X-c.X,t.Y-c.Y,t.Z-c.Z
-        end
-        local fd=Vector3.new(dx,0,dz); if fd.Magnitude<0.01 then fd=Vector3.new(1,0,0) end; fd=fd.Unit
-        ensureBV(vr,"FarmBV",1e6).Velocity=fd*S.farmSpeed+Vector3.new(0,math.clamp(dy,-1,1)*S.farmSpeed*0.5,0)
-        ensureBG(vr,"FarmBG").CFrame=CFrame.lookAt(c,c+fd)
-        local s=getSeat(); if s then s.ThrottleFloat=1 end
-    end)
-    return true
-end
-
--- Boost
-local function stopBoost()
-    S.boostEnabled=false
-    if S.boostConn then S.boostConn:Disconnect(); S.boostConn=nil end
-    local vr=getVehicleRoot(); if vr then cleanInst(vr,"BoostBV") end
-end
-local function startBoost()
-    S.boostEnabled=true
-    S.boostConn=RunService.Heartbeat:Connect(function()
-        if not S.boostEnabled then return end
-        local vr,seat=getVehicleRoot(),getSeat(); if not vr or not seat then return end
-        local moving=UserInputService:IsKeyDown(Enum.KeyCode.W)
-        local hum=getHum(); if not moving and hum and hum.MoveDirection.Magnitude>0.1 then moving=true end
-        if moving then
-            local fv=Vector3.new(vr.Velocity.X,0,vr.Velocity.Z)
-            local dir=fv.Magnitude<1 and Vector3.new(seat.CFrame.LookVector.X,0,seat.CFrame.LookVector.Z).Unit or fv.Unit
-            ensureBV(vr,"BoostBV",1e6).Velocity=dir*math.max(fv.Magnitude,20)*S.boostMulti
-            seat.ThrottleFloat=1
-        else cleanInst(vr,"BoostBV"); seat.ThrottleFloat=0 end
-    end)
 end
 
 -- Fly
@@ -168,16 +103,14 @@ local function startFly()
     for _,st in ipairs(flyStates) do hum:SetStateEnabled(st,false) end
     hum:ChangeState(Enum.HumanoidStateType.Swimming); hum.PlatformStand=true
     S.flyTpConn=RunService.Heartbeat:Connect(function()
-        if not S.flyNowe then return end
-        local chr=getChar(); local h=getHum()
+        if not S.flyNowe then return end; local chr=getChar(); local h=getHum()
         if chr and h and h.MoveDirection.Magnitude>0 then chr:TranslateBy(h.MoveDirection*(S.flySpeed*0.05)) end
     end)
     local torso=getTorso(); if not torso then return end
     ensureBG(torso,"FlyBG").CFrame=torso.CFrame; ensureBV(torso,"FlyBV",9e9).Velocity=Vector3.new(0,0.1,0)
     local speed,ctrl,last=0,{f=0,b=0,l=0,r=0},{f=0,b=0,l=0,r=0}
     S.flyConn=RunService.RenderStepped:Connect(function()
-        if not S.flyNowe then return end
-        local h2=getHum(); if h2 then h2.PlatformStand=true end
+        if not S.flyNowe then return end; local h2=getHum(); if h2 then h2.PlatformStand=true end
         local ms=S.flySpeed
         ctrl.f=UserInputService:IsKeyDown(Enum.KeyCode.W) and 1 or 0
         ctrl.b=UserInputService:IsKeyDown(Enum.KeyCode.S) and -1 or 0
@@ -203,8 +136,7 @@ end
 
 -- Noclip
 local function stopNoclip()
-    S.noclipEnabled=false
-    if S.noclipConn then S.noclipConn:Disconnect(); S.noclipConn=nil end
+    S.noclipEnabled=false; if S.noclipConn then S.noclipConn:Disconnect(); S.noclipConn=nil end
     local c=getChar(); if c then for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end
 end
 local function startNoclip()
@@ -216,112 +148,172 @@ local function startNoclip()
     end)
 end
 
+-- ESP
+local function cleanESP(plr)
+    if S.EspConns[plr] then for _,c in ipairs(S.EspConns[plr]) do c:Disconnect() end; S.EspConns[plr]=nil end
+    local cont=S.EspFolder:FindFirstChild(plr.Name); if cont then cont:Destroy() end
+end
+local function buildESP(plr)
+    if plr==player then return end; cleanESP(plr); S.EspConns[plr]={}
+    local cont=Instance.new("Folder"); cont.Name=plr.Name; cont.Parent=S.EspFolder
+    local function makeTag(char)
+        if not char then return end; local root=char:WaitForChild("HumanoidRootPart",5); if not root then return end
+        local bb=Instance.new("BillboardGui"); bb.AlwaysOnTop=true; bb.Size=UDim2.new(0,200,0,50)
+        bb.StudsOffset=Vector3.new(0,3,0); bb.Adornee=root; bb.Parent=cont
+        local lbl=Instance.new("TextLabel"); lbl.Size=UDim2.new(1,0,1,0); lbl.BackgroundTransparency=1
+        lbl.Text=plr.Name; lbl.TextColor3=Color3.fromRGB(255,60,60); lbl.TextSize=14; lbl.Font=Enum.Font.GothamBold
+        lbl.TextStrokeTransparency=0; lbl.TextStrokeColor3=Color3.fromRGB(0,0,0); lbl.Parent=bb
+    end
+    if plr.Character then makeTag(plr.Character) end
+    local conn=plr.CharacterAdded:Connect(function(c) task.wait(0.5); makeTag(c) end)
+    table.insert(S.EspConns[plr],conn)
+end
+
 -- Window
 local Window=WindUI:CreateWindow({
-    Title="AnsonDev  |  Moped Drag", Folder="AnsonDev", Icon="bike", NewElements=true,
+    Title="AnsonDev  |  Merge a Nuke", Folder="AnsonDev", Icon="zap", NewElements=true,
     Topbar={Height=48,ButtonsType="Mac"},
     OpenButton={Title="AnsonDev",CornerRadius=UDim.new(1,0),StrokeThickness=2,Enabled=true,Draggable=true,OnlyMobile=false,Scale=0.55,
-        Color=ColorSequence.new(Color3.fromHex("#4F8EF7"),Color3.fromHex("#9B59F5"))},
+        Color=ColorSequence.new(Color3.fromHex("#F7514F"),Color3.fromHex("#F59B1E"))},
 })
 Window:Tag({Title="v1.0.0",Icon="sparkles",Color=Color3.fromHex("#18181b"),Border=true})
-Window:Tag({Title="Moped Drag",Icon="bike",Color=Color3.fromHex("#1e1e2e"),Border=true})
+Window:Tag({Title="Merge a Nuke",Icon="zap",Color=Color3.fromHex("#1e1e2e"),Border=true})
 local All=Window:Section({Title="AnsonDev"})
 
 -- TAB 1: Home
 do
     local T=All:Tab({Title="Home",Icon="house"})
-    local Hero=T:Section({Title="AnsonDev  |  Moped Drag"})
+    local Hero=T:Section({Title="AnsonDev  |  Merge a Nuke"})
     Hero:Section({Title="Welcome back, "..player.Name,TextSize=24,FontWeight=Enum.FontWeight.Bold})
     Hero:Space()
-    Hero:Section({Title="The ultimate Moped Drag automation tool.\nAuto Farm  •  Speed Boost  •  Player Utilities  •  Misc Tools",TextSize=15,TextTransparency=0.35,FontWeight=Enum.FontWeight.Medium})
+    Hero:Section({Title="Full automation for Merge a Nuke.\nAuto Merge  •  Auto Pick Up  •  Auto Upgrade  •  Player Tools",TextSize=15,TextTransparency=0.35,FontWeight=Enum.FontWeight.Medium})
     T:Space({Columns=3})
     local sg=T:Group({})
     sg:Section({Title="Version",TextSize=12,TextTransparency=0.5}); sg:Section({Title="1.0.0",TextSize=18,FontWeight=Enum.FontWeight.Bold}); sg:Space()
     sg:Section({Title="Author",TextSize=12,TextTransparency=0.5}); sg:Section({Title="AnsonDev",TextSize=18,FontWeight=Enum.FontWeight.Bold}); sg:Space()
-    sg:Section({Title="Game",TextSize=12,TextTransparency=0.5}); sg:Section({Title="Moped Drag",TextSize=18,FontWeight=Enum.FontWeight.Bold})
+    sg:Section({Title="Game",TextSize=12,TextTransparency=0.5}); sg:Section({Title="Merge a Nuke",TextSize=18,FontWeight=Enum.FontWeight.Bold})
     T:Space({Columns=3})
     T:Paragraph({Title="Community  &  Support",Desc="Join the AnsonDev Discord for updates, bug reports and support.",Image="message-circle",
         Buttons={{Title="Join Discord",Icon="link",Callback=function() if setclipboard then setclipboard("https://discord.gg/FBaqTQqutg"); notify("Discord","Link copied.") end end}}})
     T:Space({Columns=3})
     local fg1=T:Group({})
-    local f1=fg1:Section({Title="Auto Farm",Box=true,BoxBorder=true,Opened=true}); f1:Section({Title="Loop between up to 4 custom points or preset race track coordinates.",TextSize=13,TextTransparency=0.35})
+    local f1=fg1:Section({Title="Auto Merge",Box=true,BoxBorder=true,Opened=true}); f1:Section({Title="Detects and merges matching nukes in your base automatically.",TextSize=13,TextTransparency=0.35})
     fg1:Space()
-    local f2=fg1:Section({Title="Speed Boost",Box=true,BoxBorder=true,Opened=true}); f2:Section({Title="Multiply moped velocity. Override MaxSpeed and RPM cap.",TextSize=13,TextTransparency=0.35})
+    local f2=fg1:Section({Title="Auto Upgrade",Box=true,BoxBorder=true,Opened=true}); f2:Section({Title="Continuously fires MAX / TIER / LOCKBASE upgrade events.",TextSize=13,TextTransparency=0.35})
     T:Space({Columns=2})
     local fg2=T:Group({})
-    local f3=fg2:Section({Title="Player Tools",Box=true,BoxBorder=true,Opened=true}); f3:Section({Title="Walk Speed, Jump Power, Fly, Noclip, God Mode, Infinite Jump.",TextSize=13,TextTransparency=0.35})
+    local f3=fg2:Section({Title="Auto Pick Up",Box=true,BoxBorder=true,Opened=true}); f3:Section({Title="Teleports to each nuke, picks it up, drops singles back.",TextSize=13,TextTransparency=0.35})
     fg2:Space()
-    local f4=fg2:Section({Title="Misc",Box=true,BoxBorder=true,Opened=true}); f4:Section({Title="Anti AFK, FPS Boost, Rejoin, Server Hop, Teleport to Player.",TextSize=13,TextTransparency=0.35})
+    local f4=fg2:Section({Title="Player Tools",Box=true,BoxBorder=true,Opened=true}); f4:Section({Title="Fly, Noclip, Walk Speed, Jump Power, God Mode, ESP.",TextSize=13,TextTransparency=0.35})
 end
 
--- TAB 2: Main - Auto Farm
+-- TAB 2: Main - Nuke Automation
 do
-    local T=All:Tab({Title="Auto Farm",Icon="map-pin"})
-    local PS=T:Section({Title="Waypoints",Box=true,BoxBorder=true,Opened=true})
-    local pg=PS:Group({})
-    for i=1,4 do
-        pg:Button({Title="Save P"..i,Icon="map-pin",Justify="Center",Callback=function()
-            local vr=getVehicleRoot(); if not vr then notify("Auto Farm","Sit on the moped first."); return end
-            S.farmPoints[i]=vr.Position; local p=S.farmPoints[i]
-            notify("P"..i.." Saved",string.format("X:%.0f  Y:%.0f  Z:%.0f",p.X,p.Y,p.Z))
-        end})
-        if i<4 then pg:Space() end
-    end
-    PS:Space()
-    PS:Button({Title="Clear All Points",Icon="trash-2",Callback=function() S.farmPoints={}; stopFarm(); notify("Auto Farm","All points cleared.") end})
-    T:Space()
-    local CS=T:Section({Title="Farm Control",Box=true,BoxBorder=true,Opened=true})
-    CS:Toggle({Title="Manual Farm  (P1 -> P4 loop)",Desc="Cycles through all saved waypoints",Callback=function(v)
-        if v then local ok,msg=startFarm(S.farmPoints); if not ok then notify("Auto Farm",msg) end
-        else stopFarm() end
+    local T=All:Tab({Title="Nuke Auto",Icon="zap"})
+    local AS=T:Section({Title="Nuke Automation",Box=true,BoxBorder=true,Opened=true})
+    AS:Toggle({Title="Auto Merge",Desc="Automatically merges matching nukes in your base",Callback=function(v)
+        S.AutoMerge=v; if not v then return end
+        task.spawn(function()
+            while S.AutoMerge do
+                local base=getPlayerBase()
+                if base and base:FindFirstChild("Nukes") then
+                    local counts={}
+                    for _,nuke in ipairs(base.Nukes:GetChildren()) do
+                        if nuke.Name=="Nuke" and nuke:FindFirstChild("OverheadNuke") and nuke.OverheadNuke:FindFirstChild("TextLabel") then
+                            local t=nuke.OverheadNuke.TextLabel.Text
+                            if t and t~="" then counts[t]=counts[t] or {}; table.insert(counts[t],nuke) end
+                        end
+                    end
+                    for _,matches in pairs(counts) do
+                        if #matches>=2 then
+                            ReplicatedStorage.NukeRemotes.PickUp:FireServer(matches[1]); task.wait()
+                            ReplicatedStorage.NukeRemotes.MergeRequest:FireServer(matches[2]); break
+                        end
+                    end
+                end
+                task.wait()
+            end
+        end)
     end})
-    CS:Space()
-    CS:Toggle({Title="Full Auto Farm  (Preset)",Desc="11185, 4, 836   <->   15777, 4, 836",Callback=function(v)
-        if v then if not getVehicleRoot() then notify("Auto Farm","Sit on the moped first."); return end
-            stopFarm(); startFarm({Vector3.new(11185,4,836),Vector3.new(15777,4,836)})
-        else stopFarm() end
+    AS:Space()
+    AS:Toggle({Title="Auto Pick Up All",Desc="Teleports to each nuke, picks up, drops singles back",Callback=function(v)
+        S.AutoPickUp=v; if not v then return end
+        task.spawn(function()
+            while S.AutoPickUp do
+                local base=getPlayerBase()
+                if base and base:FindFirstChild("Nukes") then
+                    local counts={}
+                    for _,nuke in ipairs(base.Nukes:GetChildren()) do
+                        if nuke.Name=="Nuke" and nuke:FindFirstChild("OverheadNuke") and nuke.OverheadNuke:FindFirstChild("TextLabel") then
+                            local t=nuke.OverheadNuke.TextLabel.Text
+                            if t and t~="" then counts[t]=counts[t] or {}; table.insert(counts[t],nuke) end
+                        end
+                    end
+                    for _,nuke in ipairs(base.Nukes:GetChildren()) do
+                        if not S.AutoPickUp then break end
+                        if nuke.Name=="Nuke" and nuke:FindFirstChild("OverheadNuke") and nuke.OverheadNuke:FindFirstChild("TextLabel") then
+                            local t=nuke.OverheadNuke.TextLabel.Text; local mc=counts[t] and #counts[t] or 0
+                            local root=getHRP(); local origCF=root and root.CFrame
+                            teleportTo(nuke); task.wait()
+                            ReplicatedStorage.NukeRemotes.PickUp:FireServer(nuke); task.wait()
+                            if mc<2 then
+                                local drop=ReplicatedStorage.NukeRemotes.Drop
+                                if root then drop:FireServer(root.CFrame) else drop:FireServer(CFrame.new(290.03,17.20,249.74)) end
+                                task.wait()
+                            end
+                            if root and origCF then root.CFrame=origCF end
+                        end
+                    end
+                end
+                task.wait()
+            end
+        end)
+    end})
+    AS:Space()
+    AS:Toggle({Title="Auto Lock Base",Desc="Continuously fires the lock base event",Callback=function(v)
+        S.AutoLock=v; if not v then return end
+        task.spawn(function() while S.AutoLock do task.wait(); ReplicatedStorage.NukeRemotes.RequestLockBase:FireServer() end end)
     end})
     T:Space()
-    local SS=T:Section({Title="Settings",Box=true,BoxBorder=true,Opened=true})
-    SS:Slider({Title="Farm Speed",Desc="studs/s",Step=10,Value={Min=10,Max=1000,Default=150},Callback=function(v) S.farmSpeed=v end})
-    SS:Space()
-    SS:Slider({Title="Arrival Distance",Desc="studs before switching waypoint",Step=1,Value={Min=3,Max=40,Default=12},Callback=function(v) S.arrivalDist=v end})
-    SS:Space()
-    SS:Button({Title="Force Stop",Icon="square",Callback=function() stopFarm(); notify("Auto Farm","Stopped.") end})
+    local US=T:Section({Title="Upgrade",Box=true,BoxBorder=true,Opened=true})
+    US:Dropdown({Title="Select Upgrade Types",Desc="Choose which upgrades to fire (multi-select)",Values={"MAX","TIER","LOCKBASE"},Multi=true,Value=nil,AllowNone=true,
+        Callback=function(v) S.SelectedUpgrades={}; if type(v)=="table" then for _,val in ipairs(v) do table.insert(S.SelectedUpgrades,val) end elseif v then table.insert(S.SelectedUpgrades,v) end end})
+    US:Space()
+    US:Toggle({Title="Auto Upgrade",Desc="Fires selected upgrade events continuously",Callback=function(v)
+        S.AutoUpgrade=v; if not v then return end
+        task.spawn(function()
+            while S.AutoUpgrade do
+                for _,utype in ipairs(S.SelectedUpgrades) do
+                    if not S.AutoUpgrade then break end
+                    ReplicatedStorage.NukeRemotes.PurchaseUpgrade:FireServer(utype)
+                end
+                task.wait()
+            end
+        end)
+    end})
+    T:Space()
+    local TS=T:Section({Title="Teleport",Box=true,BoxBorder=true,Opened=true})
+    local tg=TS:Group({})
+    tg:Button({Title="To Spawn",Icon="home",Justify="Center",Callback=function()
+        local root=getHRP(); if not root then return end
+        local spawn=Workspace:FindFirstChildOfClass("SpawnLocation")
+        if spawn then root.CFrame=CFrame.new(spawn.Position+Vector3.new(0,5,0)) end
+    end})
+    tg:Space()
+    tg:Button({Title="To My Base",Icon="map-pin",Justify="Center",Callback=function()
+        local base=getPlayerBase(); if base then teleportTo(base) else notify("Teleport","Could not find your base.") end
+    end})
 end
 
--- TAB 3: Main - Speed Boost
-do
-    local T=All:Tab({Title="Speed Boost",Icon="zap"})
-    local BS=T:Section({Title="Velocity Boost",Box=true,BoxBorder=true,Opened=true})
-    BS:Section({Title="Multiplies moped velocity while keeping direction.\nPC: hold W   Mobile: joystick",TextSize=13,TextTransparency=0.4})
-    BS:Space()
-    BS:Slider({Title="Speed Multiplier",Step=1,Value={Min=1,Max=20,Default=2},Callback=function(v) S.boostMulti=v end})
-    BS:Space()
-    BS:Toggle({Title="Enable Speed Boost",Callback=function(v) if v then startBoost() else stopBoost() end end})
-    T:Space()
-    local PS=T:Section({Title="Physics Override",Box=true,BoxBorder=true,Opened=true})
-    PS:Section({Title="Patches VehicleSeat MaxSpeed and HingeConstraint torque.\nSit on moped before applying.",TextSize=13,TextTransparency=0.4})
-    PS:Space()
-    PS:Slider({Title="Max Speed",Step=10,Value={Min=50,Max=1000,Default=300},Callback=function(v) S.mopedMaxSpd=v end})
-    PS:Space()
-    PS:Slider({Title="Max Torque  (RPM cap override)",Step=1000,Value={Min=1000,Max=500000,Default=50000},Callback=function(v) S.mopedTorque=v end})
-    PS:Space()
-    PS:Button({Title="Apply to Moped Now",Icon="wrench",Callback=function()
-        local ok=overrideMopedPhysics(S.mopedMaxSpd,S.mopedTorque)
-        notify(ok and "Applied" or "Failed", ok and ("MaxSpeed: "..S.mopedMaxSpd.."   Torque: "..S.mopedTorque) or "Sit on the moped first.")
-    end})
-end
-
--- TAB 4: Player
+-- TAB 3: Player
 do
     local T=All:Tab({Title="Player",Icon="user"})
     local MS=T:Section({Title="Movement",Box=true,BoxBorder=true,Opened=true})
-    MS:Slider({Title="Walk Speed",Step=1,Value={Min=8,Max=500,Default=16},Callback=function(v) S.walkVal=v; if S.walkEnabled then local h=getHum(); if h then h.WalkSpeed=v end end end})
+    MS:Slider({Title="Walk Speed",Step=1,Value={Min=16,Max=500,Default=16},Callback=function(v) S.walkVal=v; if S.walkEnabled then local h=getHum(); if h then h.WalkSpeed=v end end end})
     MS:Space()
     MS:Toggle({Title="Enable Walk Speed",Callback=function(v) S.walkEnabled=v; local h=getHum(); if h then h.WalkSpeed=v and S.walkVal or 16 end end})
     MS:Space()
-    MS:Slider({Title="Jump Power",Step=5,Value={Min=0,Max=500,Default=50},Callback=function(v) S.jumpVal=v; if S.jumpEnabled then local h=getHum(); if h then h.UseJumpPower=true; h.JumpPower=v end end end})
+    MS:Slider({Title="Jump Power",Step=5,Value={Min=50,Max=1000,Default=50},Callback=function(v) S.jumpVal=v; if S.jumpEnabled then local h=getHum(); if h then h.UseJumpPower=true; h.JumpPower=v end end end})
     MS:Space()
     MS:Toggle({Title="Enable Jump Power",Callback=function(v) S.jumpEnabled=v; local h=getHum(); if h then h.UseJumpPower=true; h.JumpPower=v and S.jumpVal or 50 end end})
     MS:Space()
@@ -344,13 +336,26 @@ do
     AS:Space()
     AS:Toggle({Title="Noclip",Desc="Walk through walls",Callback=function(v) if v then startNoclip() else stopNoclip() end end})
     T:Space()
-    T:Button({Title="Reset Player Stats",Icon="rotate-ccw",Desc="Resets WalkSpeed, JumpPower and Health to default",Callback=function()
-        local h=getHum(); if h then h.WalkSpeed=16; h.JumpPower=50; h.MaxHealth=100; h.Health=100 end
-        notify("Player","Stats reset to default.")
+    local VS=T:Section({Title="Visuals",Box=true,BoxBorder=true,Opened=true})
+    VS:Toggle({Title="Player ESP",Desc="Shows player names above their heads",Callback=function(v)
+        S.EspEnabled=v
+        if v then
+            for _,p in ipairs(Players:GetPlayers()) do buildESP(p) end
+            S.EspAddConn=Players.PlayerAdded:Connect(buildESP)
+            S.EspRemConn=Players.PlayerRemoving:Connect(cleanESP)
+        else
+            if S.EspAddConn then S.EspAddConn:Disconnect() end
+            if S.EspRemConn then S.EspRemConn:Disconnect() end
+            for _,p in ipairs(Players:GetPlayers()) do cleanESP(p) end
+        end
+    end})
+    T:Space()
+    T:Button({Title="Reset Player Stats",Icon="rotate-ccw",Desc="Resets WalkSpeed and JumpPower to default",Callback=function()
+        local h=getHum(); if h then h.WalkSpeed=16; h.UseJumpPower=true; h.JumpPower=50 end; notify("Player","Stats reset to default.")
     end})
 end
 
--- TAB 5: Misc
+-- TAB 4: Misc (same as Moped)
 do
     local T=All:Tab({Title="Misc",Icon="wrench"})
     local US=T:Section({Title="Utilities",Box=true,BoxBorder=true,Opened=true})
@@ -387,11 +392,11 @@ do
     end})
 end
 
--- TAB 6: Settings
+-- TAB 5: Settings (same as Moped)
 do
     local T=All:Tab({Title="Settings",Icon="settings"})
     local IS=T:Section({Title="Interface",Box=true,BoxBorder=true,Opened=true})
-    IS:Keybind({Title="Toggle UI",Desc="Key to show / hide the window",Value="RightControl",Callback=function(v) pcall(function() Window:SetToggleKey(Enum.KeyCode[v]) end) end})
+    IS:Keybind({Title="Toggle UI",Desc="Key to show / hide the window",Value="RightAlt",Callback=function(v) pcall(function() Window:SetToggleKey(Enum.KeyCode[v]) end) end})
     T:Space()
     local CS=T:Section({Title="Credits",Box=true,BoxBorder=true,Opened=true})
     CS:Section({Title="Made by AnsonDev\ndiscord.gg/FBaqTQqutg",TextSize=14,TextTransparency=0.3})
@@ -401,15 +406,14 @@ end
 
 -- Respawn
 player.CharacterAdded:Connect(function(char)
-    task.wait(1); local hum=char:WaitForChild("Humanoid",5); if not hum then return end
+    task.wait(0.5); local hum=char:WaitForChild("Humanoid",5); if not hum then return end
     if S.walkEnabled then hum.WalkSpeed=S.walkVal end
     if S.jumpEnabled then hum.UseJumpPower=true; hum.JumpPower=S.jumpVal end
     if S.flyEnabled then startFly() end
     if S.noclipEnabled then startNoclip() end
-    if S.boostEnabled then startBoost() end
     if S.godOn then hum.MaxHealth=math.huge; hum.Health=math.huge
         if S.godConn then S.godConn:Disconnect() end
         S.godConn=RunService.Heartbeat:Connect(function() local h=getHum(); if h then h.Health=h.MaxHealth end end) end
 end)
 
-notify("AnsonDev","Moped Drag v1.0 loaded.")
+notify("AnsonDev","Merge a Nuke v1.0 loaded.")
