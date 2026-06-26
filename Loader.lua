@@ -24,104 +24,108 @@ local function AdvancedNotify(title: string, text: string)
 	ScreenGui.Parent = CoreGui
 
 	local Frame = Instance.new("Frame")
-	Frame.Size = UDim2.new(0, 340, 0, 110)
-	Frame.Position = UDim2.new(1, 360, 1, -130)
-	Frame.BackgroundColor3 = Color3.fromRGB(14, 10, 26)
+	Frame.Size = UDim2.new(0, 364, 0, 100)
+	Frame.Position = UDim2.new(1, 380, 1, -120)
+	Frame.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
 	Frame.BorderSizePixel = 0
 	Frame.ClipsDescendants = true
 	Frame.Parent = ScreenGui
 
-	Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 16)
+	Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
 
 	local Stroke = Instance.new("UIStroke", Frame)
-	Stroke.Color = Color3.fromRGB(140, 60, 240)
+	Stroke.Color = Color3.fromRGB(255, 255, 255)
 	Stroke.Thickness = 1
-	Stroke.Transparency = 0.55
+	Stroke.Transparency = 0.92
 
-	local GlowBar = Instance.new("Frame")
-	GlowBar.Size = UDim2.new(1, 0, 0, 2)
-	GlowBar.Position = UDim2.new(0, 0, 0, 0)
-	GlowBar.BackgroundColor3 = Color3.fromRGB(160, 70, 255)
-	GlowBar.BorderSizePixel = 0
-	GlowBar.ZIndex = 3
-	GlowBar.Parent = Frame
+	local Sheen = Instance.new("Frame")
+	Sheen.Size = UDim2.new(1, 0, 0, 1)
+	Sheen.Position = UDim2.new(0, 0, 0, 0)
+	Sheen.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	Sheen.BackgroundTransparency = 0.88
+	Sheen.BorderSizePixel = 0
+	Sheen.ZIndex = 3
+	Sheen.Parent = Frame
 
-	local Dot = Instance.new("Frame")
-	Dot.Size = UDim2.new(0, 7, 0, 7)
-	Dot.Position = UDim2.new(1, -18, 0, 14)
-	Dot.BackgroundColor3 = Color3.fromRGB(160, 70, 255)
-	Dot.BorderSizePixel = 0
-	Dot.ZIndex = 4
-	Dot.Parent = Frame
-	Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
+	local Body = Instance.new("Frame")
+	Body.Size = UDim2.new(1, 0, 0, 88)
+	Body.Position = UDim2.new(0, 0, 0, 0)
+	Body.BackgroundTransparency = 1
+	Body.ZIndex = 2
+	Body.Parent = Frame
 
 	local IconBG = Instance.new("Frame")
-	IconBG.Size = UDim2.new(0, 38, 0, 38)
-	IconBG.Position = UDim2.new(0, 16, 0, 18)
-	IconBG.BackgroundColor3 = Color3.fromRGB(80, 30, 160)
-	IconBG.BackgroundTransparency = 0.75
+	IconBG.Size = UDim2.new(0, 32, 0, 32)
+	IconBG.Position = UDim2.new(0, 16, 0, 15)
+	IconBG.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	IconBG.BackgroundTransparency = 0.94
 	IconBG.BorderSizePixel = 0
-	IconBG.ZIndex = 2
-	IconBG.Parent = Frame
-	Instance.new("UICorner", IconBG).CornerRadius = UDim.new(0, 10)
+	IconBG.ZIndex = 3
+	IconBG.Parent = Body
+
+	Instance.new("UICorner", IconBG).CornerRadius = UDim.new(0, 6)
 
 	local IconStroke = Instance.new("UIStroke", IconBG)
-	IconStroke.Color = Color3.fromRGB(160, 70, 255)
+	IconStroke.Color = Color3.fromRGB(255, 255, 255)
 	IconStroke.Thickness = 1
-	IconStroke.Transparency = 0.6
+	IconStroke.Transparency = 0.9
 
 	local Icon = Instance.new("TextLabel")
-	Icon.Text = "!"
+	Icon.Text = "i"
 	Icon.Font = Enum.Font.GothamBold
-	Icon.TextSize = 20
-	Icon.TextColor3 = Color3.fromRGB(160, 70, 255)
+	Icon.TextSize = 15
+	Icon.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Icon.TextTransparency = 0.3
 	Icon.BackgroundTransparency = 1
 	Icon.Size = UDim2.new(1, 0, 1, 0)
 	Icon.TextXAlignment = Enum.TextXAlignment.Center
 	Icon.TextYAlignment = Enum.TextYAlignment.Center
-	Icon.ZIndex = 3
+	Icon.ZIndex = 4
 	Icon.Parent = IconBG
 
 	local Title = Instance.new("TextLabel")
 	Title.Text = title
 	Title.Font = Enum.Font.GothamBold
-	Title.TextSize = 14
-	Title.TextColor3 = Color3.fromRGB(232, 220, 255)
+	Title.TextSize = 13
+	Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Title.TextTransparency = 0.1
 	Title.BackgroundTransparency = 1
-	Title.Position = UDim2.new(0, 66, 0, 16)
-	Title.Size = UDim2.new(1, -90, 0, 18)
+	Title.Position = UDim2.new(0, 60, 0, 14)
+	Title.Size = UDim2.new(1, -76, 0, 17)
 	Title.TextXAlignment = Enum.TextXAlignment.Left
-	Title.ZIndex = 2
-	Title.Parent = Frame
+	Title.ZIndex = 3
+	Title.Parent = Body
 
 	local Desc = Instance.new("TextLabel")
 	Desc.Text = text
 	Desc.Font = Enum.Font.Gotham
 	Desc.TextSize = 12
-	Desc.TextColor3 = Color3.fromRGB(148, 136, 180)
+	Desc.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Desc.TextTransparency = 0.5
 	Desc.BackgroundTransparency = 1
-	Desc.Position = UDim2.new(0, 66, 0, 36)
-	Desc.Size = UDim2.new(1, -80, 0, 30)
+	Desc.Position = UDim2.new(0, 60, 0, 33)
+	Desc.Size = UDim2.new(1, -76, 0, 16)
 	Desc.TextWrapped = true
 	Desc.TextXAlignment = Enum.TextXAlignment.Left
-	Desc.ZIndex = 2
-	Desc.Parent = Frame
+	Desc.ZIndex = 3
+	Desc.Parent = Body
 
 	local PillBG = Instance.new("Frame")
 	PillBG.Size = UDim2.new(0, 0, 0, 18)
-	PillBG.Position = UDim2.new(0, 66, 0, 68)
-	PillBG.BackgroundColor3 = Color3.fromRGB(100, 40, 200)
-	PillBG.BackgroundTransparency = 0.82
+	PillBG.Position = UDim2.new(0, 60, 0, 56)
+	PillBG.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	PillBG.BackgroundTransparency = 0.95
 	PillBG.BorderSizePixel = 0
 	PillBG.AutomaticSize = Enum.AutomaticSize.X
-	PillBG.ZIndex = 2
-	PillBG.Parent = Frame
-	Instance.new("UICorner", PillBG).CornerRadius = UDim.new(0, 5)
+	PillBG.ZIndex = 3
+	PillBG.Parent = Body
+
+	Instance.new("UICorner", PillBG).CornerRadius = UDim.new(0, 4)
 
 	local PillStroke = Instance.new("UIStroke", PillBG)
-	PillStroke.Color = Color3.fromRGB(140, 60, 240)
+	PillStroke.Color = Color3.fromRGB(255, 255, 255)
 	PillStroke.Thickness = 1
-	PillStroke.Transparency = 0.65
+	PillStroke.Transparency = 0.91
 
 	local PillPad = Instance.new("UIPadding", PillBG)
 	PillPad.PaddingLeft = UDim.new(0, 7)
@@ -131,66 +135,65 @@ local function AdvancedNotify(title: string, text: string)
 	PillText.Text = "PlaceId: " .. tostring(GameId)
 	PillText.Font = Enum.Font.Code
 	PillText.TextSize = 10
-	PillText.TextColor3 = Color3.fromRGB(180, 100, 255)
+	PillText.TextColor3 = Color3.fromRGB(255, 255, 255)
+	PillText.TextTransparency = 0.65
 	PillText.BackgroundTransparency = 1
 	PillText.Size = UDim2.new(0, 0, 1, 0)
 	PillText.AutomaticSize = Enum.AutomaticSize.X
 	PillText.TextXAlignment = Enum.TextXAlignment.Left
-	PillText.ZIndex = 3
+	PillText.ZIndex = 4
 	PillText.Parent = PillBG
 
+	local Divider = Instance.new("Frame")
+	Divider.Size = UDim2.new(1, -32, 0, 1)
+	Divider.Position = UDim2.new(0, 16, 0, 88)
+	Divider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	Divider.BackgroundTransparency = 0.94
+	Divider.BorderSizePixel = 0
+	Divider.ZIndex = 2
+	Divider.Parent = Frame
+
 	local BarBG = Instance.new("Frame")
-	BarBG.Size = UDim2.new(1, -36, 0, 3)
-	BarBG.Position = UDim2.new(0, 18, 1, -14)
+	BarBG.Size = UDim2.new(1, 0, 0, 2)
+	BarBG.Position = UDim2.new(0, 0, 1, -2)
 	BarBG.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	BarBG.BackgroundTransparency = 0.93
+	BarBG.BackgroundTransparency = 0.95
 	BarBG.BorderSizePixel = 0
 	BarBG.ZIndex = 2
 	BarBG.Parent = Frame
-	Instance.new("UICorner", BarBG).CornerRadius = UDim.new(1, 0)
 
 	local Bar = Instance.new("Frame")
 	Bar.Size = UDim2.new(1, 0, 1, 0)
-	Bar.BackgroundColor3 = Color3.fromRGB(160, 70, 255)
+	Bar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	Bar.BackgroundTransparency = 0.75
 	Bar.BorderSizePixel = 0
 	Bar.ZIndex = 3
 	Bar.Parent = BarBG
-	Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
 
-	TweenService:Create(Frame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Position = UDim2.new(1, -360, 1, -130)
+	TweenService:Create(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+		Position = UDim2.new(1, -380, 1, -120)
 	}):Play()
 
 	TweenService:Create(Bar, TweenInfo.new(3, Enum.EasingStyle.Linear), {
 		Size = UDim2.new(0, 0, 1, 0)
 	}):Play()
 
-	task.spawn(function()
-		while Dot.Parent do
-			TweenService:Create(Dot, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-				BackgroundTransparency = 0.8
-			}):Play()
-			task.wait(0.9)
-			TweenService:Create(Dot, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-				BackgroundTransparency = 0
-			}):Play()
-			task.wait(0.9)
-		end
-	end)
-
 	task.wait(3)
 
-	local fadeOut = TweenInfo.new(0.45, Enum.EasingStyle.Quint)
+	local fadeOut = TweenInfo.new(0.25, Enum.EasingStyle.Quint)
+
 	TweenService:Create(Frame, fadeOut, {
-		Position = UDim2.new(1, 360, 1, -130),
+		Position = UDim2.new(1, 380, 1, -120),
 		BackgroundTransparency = 1
 	}):Play()
-	TweenService:Create(Stroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
+
+	TweenService:Create(Stroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
+
 	for _, lbl in ipairs({Title, Desc, PillText, Icon}) do
-		TweenService:Create(lbl, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+		TweenService:Create(lbl, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
 	end
 
-	task.wait(0.5)
+	task.wait(0.35)
 	ScreenGui:Destroy()
 end
 
